@@ -1,0 +1,118 @@
+@import 'variables';
+@import 'mixins';
+
+.game-container {
+  position: relative;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden; // Ensure the moving lanes and obstacles stay within the container
+}
+
+.road {
+  display: flex;
+  height: 100%;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden; // Ensure the moving lines stay within the container
+}
+
+.lane {
+  flex: 1;
+  position: relative;
+  border-left: $lane-border-width dashed $secondary-color;
+}
+
+.lane:first-child {
+  border-left: none; // Remove dashed border on the left side of the first lane
+}
+
+.lane:nth-child(5) {
+  border-right: none; // Remove dashed border on the right side of the fifth lane
+}
+
+// Add the yellow lines to the leftmost and rightmost sides
+.lane:first-child::before,
+.lane:last-child::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 8px; // Width of the yellow line
+  background-color: yellow;
+  z-index: 2000; // Increase z-index to ensure visibility
+}
+
+.lane:first-child::before {
+  left: 12px; // Position the yellow line slightly inside the left
+}
+
+.lane:last-child::after {
+  right: 12px; // Position the yellow line slightly inside the right
+}
+
+// Create the scrolling effect for the lanes
+.lane {
+  animation: dash 1.5s linear infinite;
+}
+
+@keyframes dash {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 0 100%; // Move the dashes downwards
+  }
+}
+
+.car {
+  width: $car-width;
+  height: $car-height;
+  background-color: $car-color;
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.obstacle {
+  width: $obstacle-size;
+  height: $obstacle-size;
+  background-color: $obstacle-color;
+  position: absolute;
+  transform: translateX(-50%); // Center the obstacle within its lane
+  z-index: 1; // Ensure the obstacles stay below the yellow line
+}
+
+.game-info {
+  position: absolute;
+  top: 0px;
+  left: 50px;
+  color: $secondary-color;
+  background-color: rgba(0, 0, 0, 0.5); // Add semi-transparent background
+  padding: 10px; // Add padding for spacing around the text
+  border-radius: 8px; // Add some border-radius to make the box edges rounded
+  z-index: 3000; // Ensure the score box appears on top of obstacles and lanes
+}
+
+.game-over {
+  @include center-content;
+  flex-direction: column; // Stack "Game Over" and button vertically
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: $game-over-color;
+  background-color: rgba(0, 0, 0, 0.7); // Semi-transparent black background behind Game Over
+  padding: 20px; // Add padding inside the Game Over box
+  border-radius: 10px; // Rounded edges
+  z-index: 4000; // Ensure the Game Over and button are above all other elements
+}
+
+button {
+  @include button-style;
+  margin-top: 20px; // Add space between the "Game Over" text and the button
+  background-color: rgba(97, 218, 251, 0.8); // Opaque background for the button
+  color: white;
+  border-radius: 8px; // Rounded corners for the button
+  padding: 10px 20px; // Padding inside the button for better visibility
+}
