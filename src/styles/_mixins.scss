@@ -1,11 +1,9 @@
-// Flexbox helper for centering content
 @mixin center-content {
     display: flex;
     justify-content: center;
     align-items: center;
   }
-  
-  // Mixin for a button style
+
   @mixin button-style {
     background-color: $button-color;
     border-radius: 8px;

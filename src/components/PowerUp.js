@@ -1,23 +1,33 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faStopwatch } from '@fortawesome/free-solid-svg-icons'; // Import faStopwatch icon
+import { faStopwatch, faShieldHalved } from '@fortawesome/free-solid-svg-icons'; // Import icons
 import '../styles/Game.scss';
 
-const PowerUp = ({ lane, yPos }) => {
-  // Calculate the left position based on the lane
-  const laneWidth = 100 / 5; // 5 lanes, each 20% of the width
-  const leftPosition = `${lane * laneWidth + laneWidth / 2}%`; // Add half lane width to center the power-up
+const PowerUp = ({ lane, yPos, type }) => {
+  const laneWidth = 100 / 5;
+  const leftPosition = `${lane * laneWidth + laneWidth / 2}%`;
+
+  let icon;
+  let color;
+
+  if (type === 'slow') {
+    icon = faStopwatch;
+    color = 'blue';
+  } else if (type === 'shield') {
+    icon = faShieldHalved;
+    color = 'green';
+  }
 
   return (
     <div
       className="power-up"
       style={{
-        top: `${yPos}px`, // Set vertical position
-        left: leftPosition, // Set horizontal position
-        transform: 'translateX(-50%)', // Center the power-up
+        top: `${yPos}px`,
+        left: leftPosition,
+        transform: 'translateX(-50%)',
       }}
     >
-      <FontAwesomeIcon icon={faStopwatch} size="2x" color="blue" /> {/* Render the icon */}
+      <FontAwesomeIcon icon={icon} size="2x" color={color} />
     </div>
   );
 };

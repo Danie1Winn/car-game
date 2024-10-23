@@ -11,50 +11,51 @@
   justify-content: space-between;
   position: relative;
   overflow: hidden;
-
-  // Background with yellow lines on the left and right, solid white lane dividers
   background: 
     linear-gradient(to right, 
-      yellow 6px,  /* Left yellow line */
+      yellow 6px,  
       transparent 6px, 
       transparent calc(100% - 6px), 
-      yellow calc(100% - 6px) /* Right yellow line */
+      yellow calc(100% - 6px)
     );
 }
 
 .lane {
   flex: 1;
   position: relative;
-  border-left: 2px solid white; // Solid white lane lines
-  z-index: 1; // Lower z-index to keep the lane lines below the car
+  border-left: 2px solid white;
+  z-index: 1;
 }
 
 .lane:first-child {
-  border-left: none; // Remove the left border on the first lane
+  border-left: none;
 }
 
 .lane:nth-child(5) {
-  border-right: none; // Remove the right border on the last lane
+  border-right: none;
 }
 
 .car {
-  width: 50px;
-  height: 100px;
-  background-color: red;
   position: absolute;
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 10; // Ensure car is on top of obstacles
+  z-index: 10;
+}
+
+.car-image {
+  width: 175px;
+  height: auto;
 }
 
 .obstacle {
+  position: absolute;
   width: 50px;
   height: 50px;
-  background-color: yellow;
-  position: absolute;
-  transform: translateX(-50%);
-  z-index: 5; // Ensure obstacles are below the car
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 5;
 }
 
 .power-up {
@@ -66,82 +67,128 @@
   align-items: center;
 }
 
-.game-info {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  right: 20px;
-  padding: 20px;
-  background-color: rgba(0, 0, 0, 0.5); // Semi-transparent background
-  border-radius: 8px;
-  font-weight: bold;
-  letter-spacing: 2px;
-  display: flex;
-  flex-direction: column; // Stack elements vertically
-  z-index: 15; // Ensure game info is above the car and obstacles
+.power-up.shield {
+  background-color: green;
 }
 
-.game-info p {
+.shield-status {
   display: flex;
-  justify-content: space-between; // Align titles left and values right
-  margin: 10px 0; // Add spacing between each line
+  justify-content: center;
+  align-items: center;
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 10px;
+  border-radius: 5px;
+  font-weight: bold;
+  color: white;
+  z-index: 15;
+}
+
+.shield-status .fa-shield-halved {
+  margin: 0 5px;
+}
+
+.game-info {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  width: 150px;
+  padding: 10px;
+  background-color: rgba(0, 0, 0, 0.7);
+  border-radius: 8px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  color: white;
+  z-index: 15;
+}
+
+.game-buttons {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  height: 60px;
+  padding: 0;
+  margin: 0;
+  border: 2px solid white;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .clear-high-score,
 .pause-button {
-  margin-top: 20px;
-  background-color: #f00; // Red background for the buttons
-  color: white;
-  padding: 10px;
   border: none;
-  border-radius: 5px;
-  font-size: 16px;
-  cursor: pointer;
+  color: white;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
+  font-weight: bold;
+  cursor: pointer;
+  border-right: 1px solid white;
 }
 
-.clear-high-score:hover,
-.pause-button:hover {
-  background-color: darkred;
+.clear-high-score:last-child {
+  border-right: none;
 }
 
-// Pause button specific styles
+.clear-high-score {
+  background-color: #dc3545;
+}
+
+.clear-high-score:hover {
+  background-color: #96232f;
+}
+
 .pause-button {
-  background-color: #007bff; // Blue background for pause button
+  background-color: #007bff;
 }
 
 .pause-button:hover {
-  background-color: #0056b3; // Darker blue when hovered
+  background-color: #0056b3;
+}
+
+.pause-button .fa-play, .pause-button .fa-pause {
+  font-size: 24px;
 }
 
 .game-over {
   display: flex;
-  flex-direction: column; // Stack elements vertically
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  text-transform: uppercase;
+  letter-spacing: 5px;
   color: red;
-  background-color: rgba(0, 0, 0, 0.7); // Semi-transparent background for game over
+  background-color: rgba(0, 0, 0, 0.7);
   padding: 20px;
   border-radius: 10px;
-  z-index: 20; // Ensure game-over message is on top
+  z-index: 20;
 }
 
-button {
-  margin-top: 20px;
-  padding: 10px 20px;
-  font-size: 16px;
+.game-over-button {
+  background-color: #007bff;
+  border: 2px solid white;
   border-radius: 5px;
-  border: none;
-  cursor: pointer;
-  background-color: #61dafb;
   color: white;
+  width: 50%;
+  height: 20px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  font-weight: bold;
+  cursor: pointer;
 }
 
-button:hover {
-  background-color: #21a1f1;
+.game-over-button:hover {
+  background-color: #0056b3;
 }

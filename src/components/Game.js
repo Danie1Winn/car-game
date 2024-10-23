@@ -2,27 +2,35 @@ import React, { useState, useEffect, useRef } from 'react';
 import Car from './Car';
 import Obstacle from './Obstacle';
 import PowerUp from './PowerUp';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faShieldHalved, faPause, faPlay } from '@fortawesome/free-solid-svg-icons';
 import '../styles/Game.scss';
 
 const Game = () => {
-  const [carPosition, setCarPosition] = useState(2); // Car starts in the middle lane
+  const initialSpeed = 2;
+  const maxSpeed = 5;
+  const speedIncrement = 0.1;
+  const maxShields = 3;
+
+  const [speed, setSpeed] = useState(initialSpeed);
+  const [carPosition, setCarPosition] = useState(2); // Starting in the center lane
   const [obstacles, setObstacles] = useState([]);
-  const [powerUps, setPowerUps] = useState([]); // Store power-ups
-  const [speed, setSpeed] = useState(2.5);
+  const [powerUps, setPowerUps] = useState([]);
   const [timer, setTimer] = useState(0);
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
   const [isGameOver, setIsGameOver] = useState(false);
-  const [isPaused, setIsPaused] = useState(false); // State for pausing the game
-  const [lastLane, setLastLane] = useState(null); // Keep track of the last lane
-  const [powerUpActive, setPowerUpActive] = useState(false); // Track if a power-up is active
+  const [isPaused, setIsPaused] = useState(false);
+  const [lastLane, setLastLane] = useState(null);
+  const [powerUpActive, setPowerUpActive] = useState(false);
+  const [shields, setShields] = useState(0);
+  const [collisionCooldown, setCollisionCooldown] = useState(false);
 
-  const animationRef = useRef(null); // To hold requestAnimationFrame reference
-  const collisionCheckRef = useRef(null); // Separate reference for collision detection
-  const timerIntervalRef = useRef(null); // Reference to hold the interval for the timer
-  const speedIncreaseRef = useRef(null); // Reference for speed increase
+  const animationRef = useRef(null);
+  const collisionCheckRef = useRef(null);
+  const timerIntervalRef = useRef(null);
+  const speedIncreaseRef = useRef(null);
 
-  // Fetch the high score from localStorage on mount
   useEffect(() => {
     const savedHighScore = localStorage.getItem('highScore');
     if (savedHighScore) {
@@ -30,8 +38,8 @@ const Game = () => {
     }
   }, []);
 
-  // Car movement with arrow keys
   const handleKeyDown = (e) => {
+    if (isPaused) return;
     if (e.key === 'ArrowLeft') {
       setCarPosition((prev) => Math.max(0, prev - 1));
     } else if (e.key === 'ArrowRight') {
@@ -42,51 +50,34 @@ const Game = () => {
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [isPaused]);
 
-  // Generate obstacles and power-ups at random lanes
   const generateObstacle = () => {
-    let randomLane = Math.floor(Math.random() * 5); // 5 lanes
-    // Ensure the new lane is different from the last lane
+    let randomLane = Math.floor(Math.random() * 5);
     while (randomLane === lastLane) {
       randomLane = Math.floor(Math.random() * 5);
     }
-    setLastLane(randomLane); // Update the last lane
+    setLastLane(randomLane);
     setObstacles((prev) => [...prev, { lane: randomLane, yPos: 0 }]);
 
-    // Generate a power-up with a 10% chance, ensuring it doesn't overlap with obstacles
     if (Math.random() < 0.1 && !powerUpActive) {
-      const safeLanes = [0, 1, 2, 3, 4].filter(lane => {
-        // Ensure no obstacle is in the same lane and not too close (both horizontally and vertically)
-        return !obstacles.some(obstacle => obstacle.lane === lane && Math.abs(obstacle.yPos) < 200);
-      });
-
-      if (safeLanes.length > 0) {
-        const randomSafeLane = safeLanes[Math.floor(Math.random() * safeLanes.length)];
-        setPowerUps((prev) => [...prev, { lane: randomSafeLane, yPos: 0 }]);
-      }
+      const powerUpLane = Math.floor(Math.random() * 5);
+      const powerUpType = Math.random() < 0.5 ? 'slow' : 'shield';
+      setPowerUps((prev) => [...prev, { lane: powerUpLane, yPos: 0, type: powerUpType }]);
     }
   };
 
   useEffect(() => {
     if (!isGameOver && !isPaused) {
-      const obstacleInterval = setInterval(generateObstacle, 1000); // Obstacles appear every second
+      const obstacleInterval = setInterval(generateObstacle, 1000);
       return () => clearInterval(obstacleInterval);
     }
   }, [isGameOver, isPaused, lastLane, powerUpActive]);
 
-  // Move obstacles and power-ups downward with `requestAnimationFrame`
   const moveObjects = () => {
-    setObstacles((prev) =>
-      prev.map((obstacle) => ({ ...obstacle, yPos: obstacle.yPos + speed }))
-    );
+    setObstacles((prev) => prev.map((obstacle) => ({ ...obstacle, yPos: obstacle.yPos + speed })));
+    setPowerUps((prev) => prev.map((powerUp) => ({ ...powerUp, yPos: powerUp.yPos + speed / 2 })));
 
-    // Move power-ups at half the speed of obstacles
-    setPowerUps((prev) =>
-      prev.map((powerUp) => ({ ...powerUp, yPos: powerUp.yPos + speed / 2 }))
-    );
-
-    // Continue the animation loop
     if (!isGameOver && !isPaused) {
       animationRef.current = requestAnimationFrame(moveObjects);
     }
@@ -96,78 +87,90 @@ const Game = () => {
     if (!isGameOver && !isPaused) {
       animationRef.current = requestAnimationFrame(moveObjects);
     }
-
-    return () => cancelAnimationFrame(animationRef.current); // Clean up animation on unmount
+    return () => cancelAnimationFrame(animationRef.current);
   }, [speed, isGameOver, isPaused]);
 
-  // Slow down effect when power-up is collected
   const handleSlowDown = () => {
-    setPowerUpActive(true); // Disable further power-up spawns
-
-    const prePowerUpSpeed = speed; // Save the speed before slowing down
-    const reducedSpeed = prePowerUpSpeed / 2; // Halve the current speed
-    setSpeed(reducedSpeed); // Slow down to 50% of the current speed
-    clearInterval(speedIncreaseRef.current); // Temporarily stop default speed increase
-
+    setPowerUpActive(true);
+    const prePowerUpSpeed = speed;
+    const reducedSpeed = prePowerUpSpeed / 2;
+    setSpeed(reducedSpeed);
+    clearInterval(speedIncreaseRef.current);
     setTimeout(() => {
-      // Ramp back up to 75% of the original speed after 5 seconds
       let currentSpeed = reducedSpeed;
-      const rampTargetSpeed = prePowerUpSpeed * 0.75; // 75% of the original speed
+      const rampTargetSpeed = prePowerUpSpeed * 0.75;
       const speedUpInterval = setInterval(() => {
-        currentSpeed += (rampTargetSpeed - reducedSpeed) / 10; // Ramp up over 5 seconds
+        currentSpeed += (rampTargetSpeed - reducedSpeed) / 10;
         setSpeed(currentSpeed);
         if (currentSpeed >= rampTargetSpeed) {
-          clearInterval(speedUpInterval); // Stop ramp-up once 75% speed is reached
-
-          // Resume normal speed increase after ramp-up is done
+          clearInterval(speedUpInterval);
           speedIncreaseRef.current = setInterval(() => {
-            setSpeed((prevSpeed) => prevSpeed + 0.25); // Increase speed by +0.25 every second
+            setSpeed((prevSpeed) => prevSpeed + 0.5);
           }, 1000);
-
-          // After another 2.5 seconds, allow power-ups to spawn again
           setTimeout(() => {
-            setPowerUpActive(false); // Re-enable power-up spawning after the total 12.5 seconds
+            setPowerUpActive(false);
           }, 2500);
         }
-      }, 500); // Speed ramp over 5 seconds
-    }, 5000); // Stay slow for 5 seconds
+      }, 500);
+    }, 5000);
   };
 
-  // Collision detection logic for obstacles and power-ups
   const checkCollision = () => {
+    if (collisionCooldown) return;
     obstacles.forEach((obstacle) => {
       const carTop = window.innerHeight - 120;
       const carBottom = window.innerHeight - 20;
       const obstacleTop = obstacle.yPos;
       const obstacleBottom = obstacle.yPos + 50;
+      const carLeft = carPosition * (window.innerWidth / 5);
+      const carRight = carLeft + 50;
+      const obstacleLeft = obstacle.lane * (window.innerWidth / 5);
+      const obstacleRight = obstacleLeft + 50;
       const isInSameLane = obstacle.lane === carPosition;
-      const isOverlapping = obstacleBottom > carTop && obstacleTop < carBottom;
+      const isOverlappingVertical = obstacleBottom > carTop && obstacleTop < carBottom;
+      const isOverlappingHorizontal = carLeft < obstacleRight && carRight > obstacleLeft;
 
-      if (isInSameLane && isOverlapping) {
-        setIsGameOver(true);
-        cancelAnimationFrame(animationRef.current); // Stop movement loop
-        cancelAnimationFrame(collisionCheckRef.current); // Stop collision detection loop
-        clearInterval(timerIntervalRef.current); // Stop the timer
-        clearInterval(speedIncreaseRef.current); // Stop speed increase
-        if (score > highScore) {
-          setHighScore(score);
-          localStorage.setItem('highScore', score); // Save high score to localStorage
+      if (isInSameLane && isOverlappingVertical && isOverlappingHorizontal) {
+        if (shields > 0) {
+          setShields((prevShields) => prevShields - 1);
+          setCollisionCooldown(true);
+          setTimeout(() => setCollisionCooldown(false), 500);
+        } else {
+          setIsGameOver(true);
+          cancelAnimationFrame(animationRef.current);
+          cancelAnimationFrame(collisionCheckRef.current);
+          clearInterval(timerIntervalRef.current);
+          clearInterval(speedIncreaseRef.current);
+          if (score > highScore) {
+            setHighScore(score);
+            localStorage.setItem('highScore', score);
+          }
         }
       }
     });
 
-    // Collision detection for power-ups
     powerUps.forEach((powerUp, index) => {
       const carTop = window.innerHeight - 120;
       const carBottom = window.innerHeight - 20;
       const powerUpTop = powerUp.yPos;
       const powerUpBottom = powerUp.yPos + 50;
+      const carLeft = carPosition * (window.innerWidth / 5);
+      const carRight = carLeft + 50;
+      const powerUpLeft = powerUp.lane * (window.innerWidth / 5);
+      const powerUpRight = powerUpLeft + 50;
       const isInSameLane = powerUp.lane === carPosition;
-      const isOverlapping = powerUpBottom > carTop && powerUpTop < carBottom;
+      const isOverlappingVertical = powerUpBottom > carTop && powerUpTop < carBottom;
+      const isOverlappingHorizontal = carLeft < powerUpRight && carRight > powerUpLeft;
 
-      if (isInSameLane && isOverlapping) {
-        handleSlowDown(); // Trigger slow down effect
-        setPowerUps((prev) => prev.filter((_, i) => i !== index)); // Remove power-up after collision
+      if (isInSameLane && isOverlappingVertical && isOverlappingHorizontal) {
+        if (powerUp.type === 'slow') {
+          handleSlowDown();
+        } else if (powerUp.type === 'shield') {
+          if (shields < maxShields) {
+            setShields((prevShields) => Math.min(prevShields + 1, maxShields));
+          }
+        }
+        setPowerUps((prev) => prev.filter((_, i) => i !== index));
       }
     });
 
@@ -180,60 +183,58 @@ const Game = () => {
     if (!isGameOver && !isPaused) {
       collisionCheckRef.current = requestAnimationFrame(checkCollision);
     }
-
-    return () => cancelAnimationFrame(collisionCheckRef.current); // Clean up collision detection on unmount
+    return () => cancelAnimationFrame(collisionCheckRef.current);
   }, [obstacles, carPosition, powerUps, isGameOver, isPaused]);
 
-  // Default speed increase by +0.25 every second
   useEffect(() => {
     if (!isGameOver && !isPaused) {
       speedIncreaseRef.current = setInterval(() => {
-        setSpeed((prevSpeed) => prevSpeed + 0.25);
+        setSpeed((prevSpeed) => Math.min(prevSpeed + speedIncrement, maxSpeed));
       }, 1000);
     }
-
-    return () => clearInterval(speedIncreaseRef.current); // Clean up speed increase interval on unmount
+    return () => clearInterval(speedIncreaseRef.current);
   }, [isGameOver, isPaused]);
 
-  // Reset game
+  useEffect(() => {
+    if (!isGameOver && !isPaused) {
+      timerIntervalRef.current = setInterval(() => {
+        setTimer((prev) => prev + 1);
+        setScore((prev) => prev + 10);
+      }, 1000);
+    }
+    return () => clearInterval(timerIntervalRef.current);
+  }, [isGameOver, isPaused]);
+
   const resetGame = () => {
-    // Stop any ongoing animation loops
     cancelAnimationFrame(animationRef.current);
     cancelAnimationFrame(collisionCheckRef.current);
     clearInterval(timerIntervalRef.current);
-    clearInterval(speedIncreaseRef.current); // Stop speed increase on reset
+    clearInterval(speedIncreaseRef.current);
 
-    // Reset all states
     setIsGameOver(false);
-    setCarPosition(2); // Reset car to middle lane
+    setCarPosition(2);
     setObstacles([]);
-    setPowerUps([]); // Reset power-ups
-    setScore(0); // Reset score
-    setTimer(0); // Reset timer
-    setSpeed(2.5); // Slowed down initial speed
-    setLastLane(null); // Reset the last lane
+    setPowerUps([]);
+    setScore(0);
+    setTimer(0);
+    setSpeed(initialSpeed);
+    setLastLane(null);
+    setShields(0);
+    setCollisionCooldown(false);
 
-    // Restart the game loop after resetting
     animationRef.current = requestAnimationFrame(moveObjects);
     collisionCheckRef.current = requestAnimationFrame(checkCollision);
     timerIntervalRef.current = setInterval(() => {
       setTimer((prev) => prev + 1);
       setScore((prev) => prev + 10);
     }, 1000);
-
-    // Resume speed increase after reset
-    speedIncreaseRef.current = setInterval(() => {
-      setSpeed((prevSpeed) => prevSpeed + 0.25);
-    }, 1000);
   };
 
-  // Clear high score
   const clearHighScore = () => {
     setHighScore(0);
     localStorage.removeItem('highScore');
   };
 
-  // Pause/Resume game
   const togglePause = () => {
     setIsPaused((prevPaused) => !prevPaused);
   };
@@ -250,35 +251,49 @@ const Game = () => {
           <Obstacle key={index} lane={obstacle.lane} yPos={obstacle.yPos} />
         ))}
         {powerUps.map((powerUp, index) => (
-          <PowerUp key={index} lane={powerUp.lane} yPos={powerUp.yPos} />
+          <PowerUp key={index} lane={powerUp.lane} yPos={powerUp.yPos} type={powerUp.type} />
         ))}
       </div>
 
       <div className="game-info">
+        <div className="game-buttons">
+          <button className="clear-high-score" onClick={clearHighScore}>
+            Clear High Score
+          </button>
+          <button className="pause-button" onClick={togglePause}>
+            {isPaused ? <FontAwesomeIcon icon={faPlay} /> : <FontAwesomeIcon icon={faPause} />}
+          </button>
+        </div>
         <p>
-          <span>TIME:</span>
+          <span>TIME: </span>
           <span>{timer}</span>
         </p>
         <p>
-          <span>SCORE:</span>
+          <span>SCORE: </span>
           <span>{score}</span>
         </p>
         <p>
-          <span>HIGH SCORE:</span>
+          <span>HIGH SCORE: </span>
           <span>{highScore}</span>
         </p>
-        <button className="clear-high-score" onClick={clearHighScore}>
-          Clear High Score
-        </button>
-        <button className="pause-button" onClick={togglePause}>
-          {isPaused ? 'Resume' : 'Pause'}
-        </button>
+      </div>
+
+      <div className="shield-status">
+        {Array.from({ length: maxShields }, (_, i) => (
+          <FontAwesomeIcon
+            key={i}
+            icon={faShieldHalved}
+            size="2x"
+            color={i < shields ? 'green' : 'gray'}
+            style={{ marginRight: '10px' }}
+          />
+        ))}
       </div>
 
       {isGameOver && (
         <div className="game-over">
           <h1>Game Over</h1>
-          <button onClick={resetGame}>Try Again</button>
+          <button className="game-over-button" onClick={resetGame}>Try Again</button>
         </div>
       )}
     </div>
