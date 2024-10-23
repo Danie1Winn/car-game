@@ -1,0 +1,14 @@
+{
+  "files": {
+    "main.css": "/Danie1Winn/car-game/static/css/main.06164a47.css",
+    "main.js": "/Danie1Winn/car-game/static/js/main.b2955ba1.js",
+    "static/media/red-car.png": "/Danie1Winn/car-game/static/media/red-car.8e3190c0b894c6f60004.png",
+    "index.html": "/Danie1Winn/car-game/index.html",
+    "main.06164a47.css.map": "/Danie1Winn/car-game/static/css/main.06164a47.css.map",
+    "main.b2955ba1.js.map": "/Danie1Winn/car-game/static/js/main.b2955ba1.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.06164a47.css",
+    "static/js/main.b2955ba1.js"
+  ]
+}
