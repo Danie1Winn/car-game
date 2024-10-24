@@ -2,8 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import Car from './Car';
 import Obstacle from './Obstacle';
 import PowerUp from './PowerUp';
+import ControlPanel from './ControlPanel'; 
+import PowerUpPanel from './PowerUpPanel';
+import GamePanel from './GamePanel';
+import GameOver from './GameOver'; // Import GameOver component
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faShieldHalved, faPause, faPlay } from '@fortawesome/free-solid-svg-icons';
+import { faClock } from '@fortawesome/free-solid-svg-icons'; 
 import '../styles/Game.scss';
 
 const Game = () => {
@@ -13,7 +17,7 @@ const Game = () => {
   const maxShields = 3;
 
   const [speed, setSpeed] = useState(initialSpeed);
-  const [carPosition, setCarPosition] = useState(2); // Starting in the center lane
+  const [carPosition, setCarPosition] = useState(2);
   const [obstacles, setObstacles] = useState([]);
   const [powerUps, setPowerUps] = useState([]);
   const [timer, setTimer] = useState(0);
@@ -25,6 +29,8 @@ const Game = () => {
   const [powerUpActive, setPowerUpActive] = useState(false);
   const [shields, setShields] = useState(0);
   const [collisionCooldown, setCollisionCooldown] = useState(false);
+  const [isPanelVisible, setIsPanelVisible] = useState(false);
+  const [slowdownActive, setSlowdownActive] = useState(false);
 
   const animationRef = useRef(null);
   const collisionCheckRef = useRef(null);
@@ -39,11 +45,13 @@ const Game = () => {
   }, []);
 
   const handleKeyDown = (e) => {
-    if (isPaused) return;
-    if (e.key === 'ArrowLeft') {
+    if ((e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') && !isPaused) {
       setCarPosition((prev) => Math.max(0, prev - 1));
-    } else if (e.key === 'ArrowRight') {
+    } else if ((e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') && !isPaused) {
       setCarPosition((prev) => Math.min(4, prev + 1));
+    } else if (e.key === ' ') {
+      e.preventDefault();
+      togglePause();
     }
   };
 
@@ -60,7 +68,7 @@ const Game = () => {
     setLastLane(randomLane);
     setObstacles((prev) => [...prev, { lane: randomLane, yPos: 0 }]);
 
-    if (Math.random() < 0.1 && !powerUpActive) {
+    if (Math.random() < 0.1 && !powerUpActive && !slowdownActive) {
       const powerUpLane = Math.floor(Math.random() * 5);
       const powerUpType = Math.random() < 0.5 ? 'slow' : 'shield';
       setPowerUps((prev) => [...prev, { lane: powerUpLane, yPos: 0, type: powerUpType }]);
@@ -72,7 +80,7 @@ const Game = () => {
       const obstacleInterval = setInterval(generateObstacle, 1000);
       return () => clearInterval(obstacleInterval);
     }
-  }, [isGameOver, isPaused, lastLane, powerUpActive]);
+  }, [isGameOver, isPaused, lastLane, powerUpActive, slowdownActive]);
 
   const moveObjects = () => {
     setObstacles((prev) => prev.map((obstacle) => ({ ...obstacle, yPos: obstacle.yPos + speed })));
@@ -91,11 +99,13 @@ const Game = () => {
   }, [speed, isGameOver, isPaused]);
 
   const handleSlowDown = () => {
+    setSlowdownActive(true);
     setPowerUpActive(true);
     const prePowerUpSpeed = speed;
     const reducedSpeed = prePowerUpSpeed / 2;
     setSpeed(reducedSpeed);
     clearInterval(speedIncreaseRef.current);
+    
     setTimeout(() => {
       let currentSpeed = reducedSpeed;
       const rampTargetSpeed = prePowerUpSpeed * 0.75;
@@ -108,6 +118,7 @@ const Game = () => {
             setSpeed((prevSpeed) => prevSpeed + 0.5);
           }, 1000);
           setTimeout(() => {
+            setSlowdownActive(false);
             setPowerUpActive(false);
           }, 2500);
         }
@@ -164,7 +175,9 @@ const Game = () => {
 
       if (isInSameLane && isOverlappingVertical && isOverlappingHorizontal) {
         if (powerUp.type === 'slow') {
-          handleSlowDown();
+          if (!slowdownActive) {
+            handleSlowDown();
+          }
         } else if (powerUp.type === 'shield') {
           if (shields < maxShields) {
             setShields((prevShields) => Math.min(prevShields + 1, maxShields));
@@ -221,6 +234,8 @@ const Game = () => {
     setLastLane(null);
     setShields(0);
     setCollisionCooldown(false);
+    setSlowdownActive(false);
+    setPowerUpActive(false);
 
     animationRef.current = requestAnimationFrame(moveObjects);
     collisionCheckRef.current = requestAnimationFrame(checkCollision);
@@ -239,8 +254,17 @@ const Game = () => {
     setIsPaused((prevPaused) => !prevPaused);
   };
 
+  const togglePanel = () => {
+    setIsPanelVisible(!isPanelVisible);
+  };
+
   return (
     <div className="game-container">
+      <button className="control-panel-button" onClick={togglePanel}>
+        Controls / Legend
+      </button>
+      <ControlPanel isVisible={isPanelVisible} togglePanel={togglePanel} />
+
       <div className="road">
         {Array.from({ length: 5 }, (_, lane) => (
           <div key={lane} className="lane">
@@ -255,49 +279,23 @@ const Game = () => {
         ))}
       </div>
 
-      <div className="game-info">
-        <div className="game-buttons">
-          <button className="clear-high-score" onClick={clearHighScore}>
-            Clear High Score
-          </button>
-          <button className="pause-button" onClick={togglePause}>
-            {isPaused ? <FontAwesomeIcon icon={faPlay} /> : <FontAwesomeIcon icon={faPause} />}
-          </button>
-        </div>
-        <p>
-          <span>TIME: </span>
-          <span>{timer}</span>
-        </p>
-        <p>
-          <span>SCORE: </span>
-          <span>{score}</span>
-        </p>
-        <p>
-          <span>HIGH SCORE: </span>
-          <span>{highScore}</span>
-        </p>
-      </div>
+      <GamePanel
+        timer={timer}
+        score={score}
+        highScore={highScore}
+        isPaused={isPaused}
+        clearHighScore={clearHighScore}
+        togglePause={togglePause}
+      />
 
-      <div className="shield-status">
-        {Array.from({ length: maxShields }, (_, i) => (
-          <FontAwesomeIcon
-            key={i}
-            icon={faShieldHalved}
-            size="2x"
-            color={i < shields ? 'green' : 'gray'}
-            style={{ marginRight: '10px' }}
-          />
-        ))}
-      </div>
+      <PowerUpPanel shields={shields} maxShields={maxShields} slowdownActive={slowdownActive} />
 
       {isGameOver && (
-        <div className="game-over">
-          <h1>Game Over</h1>
-          <button className="game-over-button" onClick={resetGame}>Try Again</button>
-        </div>
+        <GameOver resetGame={resetGame} />
       )}
     </div>
   );
 };
 
 export default Game;
+

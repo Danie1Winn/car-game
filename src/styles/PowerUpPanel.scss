@@ -1,0 +1,28 @@
+.power-up-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 10px;
+    border-radius: 8px;
+    z-index: 15;
+  }
+  
+  .slowdown-status {
+    margin-bottom: 10px;
+  }
+  
+  .shield-status {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .shield-status .fa-shield-halved {
+    margin: 0 5px;
+  }
+  
